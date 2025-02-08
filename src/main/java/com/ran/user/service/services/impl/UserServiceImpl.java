@@ -3,17 +3,16 @@ package com.ran.user.service.services.impl;
 import com.ran.user.service.entities.Hotel;
 import com.ran.user.service.entities.Rating;
 import com.ran.user.service.entities.User;
+import com.ran.user.service.external.service.HotelService;
 import com.ran.user.service.respositories.UserRepository;
 import com.ran.user.service.services.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.lang.module.ResolutionException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +28,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired
+    private HotelService hotelService;
 
     @Override
     public User saveUser(User user) {
@@ -49,14 +51,17 @@ public class UserServiceImpl implements UserService {
     public User getUserById(String userId) {
         // fetch user with the help of userId from user repository
         User user = userRepository.findById(userId).orElseThrow(()-> new ResolutionException("User with given Id not found"+ userId));
-        // fetch ratings of the user from Rating Service with help below url
-        Rating[] ratingOfUser = restTemplate.getForObject("http://localhost:8083/ratings/userid/"+ user.getUserId(), Rating[].class);
+        // fetch ratings of the user from Rating Service with help below url using restTemplate
+         Rating[] ratingOfUser = restTemplate.getForObject("http://RATING-SERVICE/ratings/userid/"+ user.getUserId(), Rating[].class);
 
         List<Rating> ratings = Arrays.stream(ratingOfUser).toList();
         List<Rating> ratingList = (List<Rating>) ratings.stream().map((rating) ->{
             // api call to hotel service
             // http://localhost:8082/hotels/9d2b6317-f246-4a22-b6bb-d68b1b0c686f
-            Hotel hotel = restTemplate.getForObject("http://localhost:8082/hotels/" + rating.getHotelId(), Hotel.class);
+            // Hotel hotel = restTemplate.getForObject("http://HOTEL-SERVICE/hotels/" + rating.getHotelId(), Hotel.class);
+
+            // fetch hotels of the user from Rating Service with help below url using feign Client
+            Hotel hotel = hotelService.getHotel(rating.getHotelId());
 
             log.info("hotel : {}", hotel);
 
